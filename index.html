@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LilimㅣLRC파일을 무료로 검색하세요. 방대한 양의 LRC파일 제공</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Inter 폰트 적용 */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* 배경색을 어두운 회색으로 변경 */
+            background-color: #1a1a1a; /* Dark background */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #e0e0e0; /* Default text color for dark mode */
+            padding-top: 2rem; /* Mobile default padding top (will be overridden by pt-24 in body class) */
+            padding-bottom: 2rem; /* Mobile default padding bottom */
+        }
+        /* 검색창 그림자 및 테두리 제거 */
+        .search-input:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: transparent;
+        }
+        /* 검색 버튼 스타일: 배경색과 패딩 제거, 아이콘만 남김 */
+        .search-button {
+            color: #03c75a; /* 네이버 그린 (아이콘 색상) */
+            transition: color 0.2s; /* 호버 시 아이콘 색상 변경 */
+        }
+        .search-button:hover {
+            color: #02b34f; /* 호버 시 아이콘 색상 변경 */
+        }
+        /* 바로가기 링크 스타일 */
+        .shortcut-link {
+            color: #a0a0a0; /* Darker text for less emphasis */
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .shortcut-link:hover {
+            background-color: #333; /* Darker hover background */
+            color: #f0f0f0; /* Lighter text on hover */
+        }
+        /* 일반적인 카드 스타일 (새로 추가된 박스들에 적용) - 그림자 제거 */
+        .content-card {
+            background-color: #282828; /* Darker card background */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            border: 1px solid #3a3a3a; /* Darker border */
+            color: #e0e0e0; /* Default text color for cards */
+        }
+        /* 인기곡 아이템 스타일 */
+        .song-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #3a3a3a; /* Darker border */
+        }
+        .song-item:last-child {
+            border-bottom: none;
+        }
+        .song-rank {
+            font-weight: 700;
+            color: #03c75a; /* 네이버 그린 */
+            width: 2rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .song-title {
+            flex-grow: 1;
+            font-size: 0.95rem;
+            color: #e0e0e0; /* Lighter text */
+            margin-left: 0.5rem;
+        }
+        .song-artist {
+            font-size: 0.8rem;
+            color: #a0a0a0; /* Darker text */
+            margin-left: 0.5rem;
+            white-space: nowrap;
+        }
+        /* 추천곡 아이템 스타일 */
+        .recommended-song-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background-color: #333; /* Darker background */
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .recommended-song-item:hover {
+            background-color: #444; /* Even darker hover background */
+        }
+        .recommended-song-item img {
+            flex-shrink: 0;
+            margin-right: 0.75rem;
+        }
+        .recommended-song-info {
+            flex-grow: 1;
+        }
+        .recommended-song-title {
+            font-weight: 600;
+            color: #e0e0e0; /* Lighter text */
+            font-size: 0.95rem;
+        }
+        .recommended-song-artist {
+            font-size: 0.8rem;
+            color: #a0a0a0; /* Darker text */
+        }
+        /* 탭 메뉴 버튼 스타일 - 사이즈 확대 */
+        .tab-button {
+            display: flex; /* 아이콘과 텍스트를 한 줄에 정렬 */
+            align-items: center;
+            padding: 0.9rem 1.4rem; /* 패딩 증가 */
+            border-radius: 0.6rem; /* 둥근 모서리 약간 증가 */
+            font-weight: 600;
+            color: #a0a0a0; /* Default text color for inactive tabs */
+            background-color: transparent; /* 배경 투명 */
+            border: none; /* 테두리 제거 */
+            transition: color 0.2s; /* 색상 변화만 트랜지션 */
+            cursor: pointer;
+            white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+            font-size: 1.05rem; /* 폰트 사이즈 증가 */
+        }
+        .tab-button svg {
+            margin-right: 0.6rem; /* 아이콘과 텍스트 사이 간격 증가 */
+            width: 1.4rem; /* 아이콘 크기 증가 */
+            height: 1.4rem; /* 아이콘 크기 증가 */
+            color: #a0a0a0; /* Default icon color for inactive tabs */
+            transition: color 0.2s;
+        }
+        .tab-button.active {
+            background-color: transparent; /* 활성화 시 배경 투명 */
+            color: #03c75a; /* 활성화 시 텍스트 색상 초록색 */
+        }
+        .tab-button.active svg {
+            color: #03c75a; /* 활성화 시 아이콘 색상 초록색 */
+        }
+        .tab-button:hover:not(.active) {
+            background-color: transparent; /* 호버 시 배경 투명 유지 */
+            color: #f0f0f0; /* 호버 시 텍스트 색상 변경 (밝게) */
+        }
+        .tab-button:hover:not(.active) svg {
+            color: #f0f0f0; /* 호버 시 아이콘 색상 변경 (밝게) */
+        }
+        /* 새 탭 아이콘 스타일 */
+        .external-link-icon {
+            margin-left: 0.5rem; /* 텍스트와 아이콘 사이 간격 */
+            width: 1rem; /* 아이콘 크기 */
+            height: 1rem; /* 아이콘 크기 */
+            color: #a0a0a0; /* Default color for dark mode */
+            transition: color 0.2s;
+        }
+        .tab-button.active .external-link-icon {
+            color: #03c75a; /* 활성화 시 초록색 */
+        }
+        .tab-button:hover .external-link-icon {
+            color: #02b34f; /* 호버 시 초록색 */
+        }
+        .tab-content {
+            display: none;
+            padding-top: 1rem;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* 탭 콘텐츠 내 요소 스타일 */
+        .latest-lyric-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #3a3a3a; /* Darker dashed border */
+        }
+        .latest-lyric-item:last-child {
+            border-bottom: none;
+        }
+        .new-badge {
+            background-color: #ef4444; /* 빨간색 */
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.3rem;
+            margin-right: 0.5rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .genre-theme-tag {
+            display: inline-block;
+            background-color: #334455; /* Darker blue background */
+            color: #88bbff; /* Lighter blue text */
+            padding: 0.4rem 0.8rem; /* 패딩 복원 */
+            border-radius: 9999px; /* 완전 둥근 모서리 복원 */
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+            margin-right: 0.75rem; /* 태그 간 간격 조정 */
+            margin-bottom: 0.5rem; /* 줄바꿈 시 간격 */
+        }
+        .genre-theme-tag:hover {
+            background-color: #445566; /* Darker hover background */
+            color: #aaccff; /* Lighter hover text */
+        }
+        .tab-genre-grid, .tab-theme-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        /* 반응형 디자인을 위한 미디어 쿼리 */
+        @media (min-width: 768px) { /* md (768px) 이상 화면 */
+            body {
+                padding-top: 5rem; /* Desktop padding top */
+                padding-bottom: 3rem; /* Desktop padding bottom */
+            }
+            .main-content-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)); /* Desktop grid layout */
+            }
+            .md\:col-span-2 {
+                grid-column: span 2 / span 2;
+            }
+            .md\:col-span-1 {
+                grid-column: span 1 / span 1;
+            }
+            .md\:col-span-3 {
+                grid-column: span 3 / span 3;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center relative pt-24 pb-2 md:pt-20 md:pb-12">
+    <!-- Lilim 플랫폼 이름 섹션 -->
+    <div class="w-full max-w-xl px-4 mb-6 text-center">
+        <h1 class="text-5xl font-extrabold text-gray-200 tracking-tight">Lilim</h1> <!-- Lighter text -->
+    </div>
+
+    <!-- 검색창 섹션 -->
+    <div class="w-full max-w-xl px-4 mb-96 md:mb-14"> <!-- Increased mb for mobile, kept desktop mb -->
+        <div class="flex items-center bg-[#212121] rounded-full overflow-hidden border border-gray-600">
+            <input type="text" id="main-search-input" placeholder="검색어를 입력해주세요." class="search-input flex-grow py-3 px-6 text-lg rounded-l-full focus:ring-0 focus:border-transparent bg-[#212121] text-gray-200 placeholder-gray-500">
+            <!-- 검색 버튼 (아이콘만) -->
+            <button id="main-search-button" class="search-button h-full px-4 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 하단 박스 섹션 (main 태그 내부에 통합) -->
+    <main class="w-full max-w-4xl px-4 flex flex-col gap-6 mb-12 md:grid main-content-grid">
+        <!-- 좌측 박스: Lilim 실시간 인기곡 -->
+        <section class="md:col-span-2 content-card">
+            <h2 class="text-xl font-bold mb-4 text-gray-200">Lilim 실시간 인기곡</h2> <!-- Lighter text -->
+            <div id="lilim-top-songs" class="space-y-2">
+                <!-- 인기곡 목록이 여기에 표시됩니다. -->
+                <div class="song-item">
+                    <span class="song-rank">1</span>
+                    <a href="#" class="song-title hover:underline">Summer Vibe</a>
+                    <span class="song-artist">Artist A</span>
+                </div>
+                <div class="song-item">
+                    <span class="song-rank">2</span>
+                    <a href="#" class="song-title hover:underline">City Lights</a>
+                    <span class="song-artist">Artist B</span>
+                </div>
+                <div class="song-item">
+                    <span class="song-rank">3</span>
+                    <a href="#" class="song-title hover:underline">Dreamy Melody</a>
+                    <span class="song-artist">Artist C</span>
+                </div>
+                <div class="song-item">
+                    <span class="song-rank">4</span>
+                    <a href="#" class="song-title hover:underline">Rainy Day</a>
+                    <span class="song-artist">Artist D</span>
+                </div>
+                <div class="song-item">
+                    <span class="song-rank">5</span>
+                    <a href="#" class="song-title hover:underline">Starlight Serenade</a>
+                    <span class="song-artist">Artist E</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 우측 박스: Lilim 오늘의 추천곡 (노래 가사 검색 사이트에 어울리는 탭) -->
+        <section class="md:col-span-1 content-card">
+            <h2 class="text-xl font-bold mb-4 text-gray-200">오늘의 추천곡</h2> <!-- Lighter text -->
+            <div class="space-y-3">
+                <a href="#" class="recommended-song-item">
+                    <img src="https://placehold.co/60x60/444444/DDDDDD?text=Album" alt="앨범 커버"> <!-- Darker placeholder -->
+                    <div class="recommended-song-info">
+                        <p class="recommended-song-title">Love Story</p>
+                        <p class="recommended-song-artist">Artist F</p>
+                    </div>
+                </a>
+                <a href="#" class="recommended-song-item">
+                    <img src="https://placehold.co/60x60/444444/DDDDDD?text=Album" alt="앨범 커버"> <!-- Darker placeholder -->
+                    <div class="recommended-song-info">
+                        <p class="recommended-song-title">Midnight Drive</p>
+                        <p class="recommended-song-artist">Artist G</p>
+                    </div>
+                </a>
+                <a href="#" class="recommended-song-item">
+                    <img src="https://placehold.co/60x60/444444/DDDDDD?text=Album" alt="앨범 커버"> <!-- Darker placeholder -->
+                    <div class="recommended-song-info">
+                        <p class="recommended-song-title">Whispering Wind</p>
+                        <p class="recommended-song-artist">Artist H</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- 새로운 하단 긴 박스 섹션 - content-card 클래스 유지 -->
+        <section class="md:col-span-3 content-card mt-6">
+            <!-- 탭 버튼들을 감싸는 div에 border-b border-gray-200 클래스 유지 -->
+            <div class="flex border-b border-gray-700 mb-4"> <!-- Darker border -->
+                <!-- '테마별 가사'를 '아티스트 검색'으로 변경하고 초기 활성화 -->
+                <button class="tab-button active" data-tab="artist-search">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                    아티스트 검색
+                </button>
+                <!-- 'LRC파일 만들기' 탭 -->
+                <button class="tab-button ml-2" data-tab="lrc-maker" onclick="window.open('https://nmate.kr/lrcstudio', '_blank');">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    LRC파일 만들기
+                    <!-- 새 탭으로 이동 아이콘 추가 -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="external-link-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+                </button>
+            </div>
+            <!-- '최신 가사' 탭 콘텐츠 삭제됨 -->
+            <!-- '장르별 가사' 탭 콘텐츠 삭제됨 -->
+            <div id="tab-artist-search" class="tab-content active">
+                <div class="flex items-center bg-[#212121] rounded-full overflow-hidden border border-gray-600">
+                    <input type="text" placeholder="아티스트 이름을 검색하세요." class="search-input flex-grow py-3 px-6 text-lg rounded-l-full focus:ring-0 focus:border-transparent bg-[#212121] text-gray-200 placeholder-gray-500">
+                    <button class="search-button h-full px-4 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- '가사 신청' 탭 콘텐츠 삭제 (LRC파일 만들기로 대체) -->
+            <div id="tab-lrc-maker" class="tab-content">
+                <p class="text-gray-200 mb-4">LRC 파일을 직접 만들고 싶으신가요? 아래 버튼을 눌러보세요!</p> <!-- Lighter text -->
+                <button class="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-semibold" onclick="window.open('https://nmate.kr/lrcstudio', '_blank');"> <!-- Darker blue button -->
+                    LRC 스튜디오로 이동
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 메인 검색창 요소 가져오기
+        const mainSearchInput = document.getElementById('main-search-input');
+        const mainSearchButton = document.getElementById('main-search-button');
+
+        // 메인 검색 함수
+        function performMainSearch() {
+            const query = mainSearchInput.value.trim();
+            if (query) {
+                // 검색 페이지로 이동하면서 쿼리 파라미터 전달
+                window.location.href = `https://nmate.kr/search.html?q=${encodeURIComponent(query)}`;
+            }
+        }
+
+        // 메인 검색 버튼 클릭 이벤트 리스너
+        mainSearchButton.addEventListener('click', performMainSearch);
+
+        // 메인 검색 입력창에서 Enter 키 누름 이벤트 리스너
+        mainSearchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                performMainSearch();
+            }
+        });
+
+        // 탭 기능 스크립트 (기존 로직 유지)
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // 초기 활성화 탭 설정 (아티스트 검색)
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialActiveTabButton = document.querySelector('.tab-button[data-tab="artist-search"]');
+            const initialActiveTabContent = document.getElementById('tab-artist-search');
+            if (initialActiveTabButton) initialActiveTabButton.classList.add('active');
+            if (initialActiveTabContent) initialActiveTabContent.classList.add('active');
+        });
+
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // 특정 탭 (LRC파일 만들기) 클릭 시 외부 링크로 이동
+                if (button.dataset.tab === 'lrc-maker') {
+                    // 외부 링크로 이동하는 것은 이미 onclick 속성에 정의되어 있습니다.
+                    // 여기서는 탭 활성화 로직만 건너뛰고, 다른 탭은 정상 작동하도록 합니다.
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active'); // 클릭된 버튼은 활성화 상태로 유지
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    // LRC Maker 탭은 콘텐츠를 보여주지 않으므로, 해당 콘텐츠를 활성화하지 않습니다.
+                    return; // 함수 종료
+                }
+
+                // 일반 탭 활성화 로직
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                const targetTabId = `tab-${button.dataset.tab}`;
+                document.getElementById(targetTabId).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
