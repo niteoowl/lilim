@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lilim 가사 상세</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Inter 폰트 적용 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a; /* Dark background */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #e0e0e0; /* Default text color for dark mode */
+            padding: 2rem 1rem; /* Mobile default padding */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        /* 로딩 스피너 스타일 */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #03c75a; /* Green */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 4rem auto;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 가사 섹션 스타일 */
+        .lyrics-section {
+            background-color: #282828; /* Darker card background */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            border: 1px solid #3a3a3a; /* Darker border */
+            margin-bottom: 1.5rem;
+            width: 100%;
+            max-width: 800px; /* Max width for readability */
+        }
+        .lyrics-section h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .lyrics-section h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px solid #3a3a3a;
+            padding-bottom: 0.5rem;
+        }
+        .lyrics-content {
+            font-size: 1rem;
+            color: #e0e0e0;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            word-break: break-word; /* Break long words */
+            line-height: 1.6;
+        }
+        /* 오류 메시지 스타일 */
+        .error-message {
+            color: #ef4444; /* Red color for errors */
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+        }
+
+        /* 반응형 디자인을 위한 미디어 쿼리 */
+        @media (min-width: 768px) { /* md (768px) 이상 화면 */
+            body {
+                padding: 3rem 2rem; /* Desktop padding */
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="w-full max-w-4xl px-4">
+        <div id="lyrics-detail-container" class="lyrics-section">
+            <h2 id="song-title"></h2>
+            <div id="loading-spinner" class="loader"></div>
+            <p id="error-message" class="error-message hidden"></p>
+
+            <div id="plain-lyrics-section" class="mt-4">
+                <h3>가사</h3>
+                <pre id="plain-lyrics-content" class="lyrics-content"></pre>
+            </div>
+
+            <div id="synced-lyrics-section" class="mt-4">
+                <h3>싱크 가사</h3>
+                <pre id="synced-lyrics-content" class="lyrics-content"></pre>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const songTitleElement = document.getElementById('song-title');
+        const plainLyricsContent = document.getElementById('plain-lyrics-content');
+        const syncedLyricsContent = document.getElementById('synced-lyrics-content');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessageElement = document.getElementById('error-message');
+        const plainLyricsSection = document.getElementById('plain-lyrics-section');
+        const syncedLyricsSection = document.getElementById('synced-lyrics-section');
+
+        // Function to display an error message
+        function displayError(message) {
+            errorMessageElement.textContent = message;
+            errorMessageElement.classList.remove('hidden');
+            songTitleElement.textContent = ''; // Clear title
+            plainLyricsSection.classList.add('hidden'); // Hide lyrics sections
+            syncedLyricsSection.classList.add('hidden');
+        }
+
+        // Function to fetch and display lyrics
+        async function fetchLyricsDetail(id) {
+            loadingSpinner.style.display = 'block'; // Show loading spinner
+            errorMessageElement.classList.add('hidden'); // Hide any previous error messages
+            plainLyricsSection.classList.add('hidden'); // Hide lyrics sections initially
+            syncedLyricsSection.classList.add('hidden');
+
+            if (!id) {
+                displayError('가사 ID가 제공되지 않았습니다.');
+                loadingSpinner.style.display = 'none';
+                return;
+            }
+
+            const apiUrl = `https://lrclib.net/api/get/${id}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        displayError('해당 ID의 가사를 찾을 수 없습니다.');
+                    } else {
+                        displayError(`가사를 불러오는 중 오류가 발생했습니다: ${response.statusText}`);
+                    }
+                    return;
+                }
+
+                const result = await response.json();
+
+                songTitleElement.textContent = `${result.trackName} - ${result.artistName}`;
+                if (result.albumName) {
+                    songTitleElement.textContent += ` (${result.albumName})`;
+                }
+
+                plainLyricsSection.classList.remove('hidden'); // Show plain lyrics section
+                syncedLyricsSection.classList.remove('hidden'); // Show synced lyrics section
+
+                if (result.instrumental) {
+                    plainLyricsContent.textContent = '이 곡은 기악곡입니다.';
+                    syncedLyricsContent.textContent = '이 곡은 기악곡입니다.';
+                } else {
+                    plainLyricsContent.textContent = result.plainLyrics || '가사를 찾을 수 없습니다.';
+                    syncedLyricsContent.textContent = result.syncedLyrics || '싱크된 가사를 찾을 수 없습니다.';
+                }
+
+            } catch (error) {
+                console.error('Failed to fetch lyrics detail:', error);
+                displayError('네트워크 오류가 발생했습니다. 가사를 불러올 수 없습니다.');
+            } finally {
+                loadingSpinner.style.display = 'none'; // Hide loading spinner
+            }
+        }
+
+        // Get lyrics ID from URL parameter
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lyricsId = urlParams.get('id'); // Get the 'id' parameter from URL
+
+            fetchLyricsDetail(lyricsId);
+        });
+    </script>
+</body>
+</html>
