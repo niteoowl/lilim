@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LilimㅣLRC파일 검색 결과</title>
+    <title>Lilim 검색 결과</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
@@ -55,11 +54,6 @@
             color: #a0a0a0; /* Darker text for snippet */
             margin-bottom: 0.5rem;
         }
-        /* .result-url { /* Removed as per user request */
-        /* font-size: 0.8rem; */
-        /* color: #03c75a; */
-        /* word-break: break-all; */
-        /* } */
         /* 로딩 스피너 스타일 */
         .loader {
             border: 4px solid #f3f3f3; /* Light grey */
@@ -76,7 +70,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* 모달 스타일 */
+        /* 모달 스타일 (이제 사용되지 않음, 하지만 스타일은 유지) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -180,7 +174,7 @@
         <div id="loading-spinner" class="loader"></div>
     </main>
 
-    <!-- LRC 파일 보기 모달 -->
+    <!-- LRC 파일 보기 모달 (이제 사용되지 않음 - 상세 페이지로 직접 이동) -->
     <div id="lyrics-modal-overlay" class="modal-overlay">
         <div class="modal-content">
             <button id="modal-close-button" class="modal-close-button">&times;</button>
@@ -207,85 +201,19 @@
         const loadingSpinner = document.getElementById('loading-spinner');
         const initialMessage = document.getElementById('initial-message');
 
-        const lyricsModalOverlay = document.getElementById('lyrics-modal-overlay');
-        const modalCloseButton = document.getElementById('modal-close-button');
-        const modalLyricsTitle = document.getElementById('modal-lyrics-title');
-        const plainLyricsContent = document.getElementById('plain-lyrics-content');
-        const syncedLyricsContent = document.getElementById('synced-lyrics-content');
-        const modalLoadingSpinner = document.getElementById('modal-loading-spinner');
-        const modalErrorMessage = document.getElementById('modal-error-message');
+        // 모달 관련 요소는 이제 사용되지 않지만, 만약을 위해 변수는 유지합니다.
+        // const lyricsModalOverlay = document.getElementById('lyrics-modal-overlay');
+        // const modalCloseButton = document.getElementById('modal-close-button');
+        // const modalLyricsTitle = document.getElementById('modal-lyrics-title');
+        // const plainLyricsContent = document.getElementById('plain-lyrics-content');
+        // const syncedLyricsContent = document.getElementById('synced-lyrics-content');
+        // const modalLoadingSpinner = document.getElementById('modal-loading-spinner');
+        // const modalErrorMessage = document.getElementById('modal-error-message');
 
         // Function to display messages (e.g., no results, error) in the main search area
         function displayMessage(message) {
             searchResultsContainer.innerHTML = `<p class="text-gray-400 text-center py-8">${message}</p>`;
         }
-
-        // Function to display messages in the modal
-        function displayModalMessage(message) {
-            modalErrorMessage.textContent = message;
-            modalErrorMessage.classList.remove('hidden');
-        }
-
-        // Function to fetch and display full lyrics in a modal
-        async function showLyricsModal(id) {
-            lyricsModalOverlay.classList.add('show');
-            modalLoadingSpinner.style.display = 'block';
-            modalErrorMessage.classList.add('hidden'); // Hide previous error messages
-            modalLyricsTitle.textContent = '';
-            plainLyricsContent.textContent = '로딩 중...';
-            syncedLyricsContent.textContent = '로딩 중...';
-
-            const apiUrl = `https://lrclib.net/api/get/${id}`;
-
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const result = await response.json();
-
-                modalLyricsTitle.textContent = `${result.trackName} - ${result.artistName}`;
-                if (result.albumName) {
-                    modalLyricsTitle.textContent += ` (${result.albumName})`;
-                }
-
-                if (result.instrumental) {
-                    plainLyricsContent.textContent = '이 곡은 기악곡입니다.';
-                    syncedLyricsContent.textContent = '이 곡은 기악곡입니다.';
-                } else {
-                    plainLyricsContent.textContent = result.plainLyrics || '가사를 찾을 수 없습니다.';
-                    syncedLyricsContent.textContent = result.syncedLyrics || '싱크된 가사를 찾을 수 없습니다.';
-                }
-
-            } catch (error) {
-                console.error('Failed to fetch lyrics:', error);
-                displayModalMessage('가사를 불러오는 데 실패했습니다. 다시 시도해주세요.');
-                plainLyricsContent.textContent = '';
-                syncedLyricsContent.textContent = '';
-            } finally {
-                modalLoadingSpinner.style.display = 'none';
-            }
-        }
-
-        // Function to close the lyrics modal
-        function closeLyricsModal() {
-            lyricsModalOverlay.classList.remove('show');
-            // Clear modal content when closing
-            modalLyricsTitle.textContent = '';
-            plainLyricsContent.textContent = '';
-            syncedLyricsContent.textContent = '';
-            modalErrorMessage.classList.add('hidden');
-        }
-
-        // Event listener for modal close button
-        modalCloseButton.addEventListener('click', closeLyricsModal);
-
-        // Close modal when clicking outside the content
-        lyricsModalOverlay.addEventListener('click', (event) => {
-            if (event.target === lyricsModalOverlay) {
-                closeLyricsModal();
-            }
-        });
 
         // Function to fetch search results from LRCLIB API
         async function fetchSearchResults(query) {
@@ -320,10 +248,9 @@
                     results.forEach(result => {
                         const resultCard = document.createElement('div');
                         resultCard.className = 'result-card';
-                        resultCard.dataset.lyricsId = result.id; // Store LRC ID for modal
+                        resultCard.dataset.lyricsId = result.id; // Store LRC ID
 
                         const titleLink = document.createElement('a');
-                        // No href as click will be handled by JS
                         titleLink.className = 'result-title hover:underline';
                         titleLink.textContent = `${result.trackName} - ${result.artistName}`;
                         if (result.albumName) {
@@ -332,7 +259,6 @@
 
                         const snippet = document.createElement('p');
                         snippet.className = 'result-snippet';
-                        // Display a snippet or full plain lyrics if short
                         const plainLyricsSnippet = result.plainLyrics ? result.plainLyrics.substring(0, 150) : '';
                         snippet.textContent = plainLyricsSnippet.length > 0 ? plainLyricsSnippet + '...' : '가사 미리보기를 사용할 수 없습니다.';
 
@@ -340,8 +266,10 @@
                         resultCard.appendChild(snippet);
                         searchResultsContainer.appendChild(resultCard);
 
-                        // Add event listener to the entire card for showing lyrics modal
-                        resultCard.addEventListener('click', () => showLyricsModal(result.id));
+                        // Add event listener to the entire card to navigate to detail page
+                        resultCard.addEventListener('click', () => {
+                            window.location.href = `lyrics-detail-page.html?id=${result.id}`;
+                        });
                     });
                 }
             } catch (error) {
@@ -382,6 +310,8 @@
         // Call parseUrlAndSearch on page load
         document.addEventListener('DOMContentLoaded', parseUrlAndSearch);
 
+        // 모달 관련 함수 및 이벤트 리스너는 이제 사용되지 않으므로 주석 처리하거나 제거할 수 있습니다.
+        // showLyricsModal, closeLyricsModal, modalCloseButton.addEventListener 등
     </script>
 </body>
 </html>
