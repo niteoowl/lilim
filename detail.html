@@ -68,6 +68,8 @@
             white-space: pre-wrap; /* Preserve whitespace and line breaks */
             word-break: break-word; /* Break long words */
             line-height: 1.6;
+            overflow-y: auto; /* Keep scroll for very long lyrics */
+            padding: 0.5rem 0; /* Add some padding for readability */
         }
         /* 오류 메시지 스타일 */
         .error-message {
@@ -81,14 +83,17 @@
         .lyrics-nav-button {
             background-color: transparent;
             border: none;
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+            padding: 0.8rem 0; /* Adjusted vertical padding */
+            font-size: 1.1rem; /* Slightly larger font */
             font-weight: 600;
             color: #a0a0a0; /* Default color for inactive */
             cursor: pointer;
             transition: color 0.2s;
             position: relative; /* For underline effect */
             overflow: hidden; /* For underline animation */
+            flex-grow: 1; /* Allow buttons to grow */
+            width: 50%; /* Each button takes half width */
+            text-align: center; /* Center text within button */
         }
         .lyrics-nav-button:hover {
             color: #f0f0f0; /* Lighter on hover */
@@ -135,15 +140,17 @@
             <!-- 가사/싱크 가사 버튼 섹션 -->
             <div class="flex justify-center border-b border-gray-700 mb-6">
                 <button class="lyrics-nav-button active" data-target="plain-lyrics-section">가사</button>
-                <button class="lyrics-nav-button ml-4" data-target="synced-lyrics-section">싱크 가사</button>
+                <button class="lyrics-nav-button" data-target="synced-lyrics-section">싱크 가사</button>
             </div>
 
+            <!-- 가사 콘텐츠 섹션 -->
             <div id="plain-lyrics-section" class="mt-4">
                 <h3>가사</h3>
                 <pre id="plain-lyrics-content" class="lyrics-content"></pre>
             </div>
 
-            <div id="synced-lyrics-section" class="mt-4">
+            <!-- 싱크 가사 콘텐츠 섹션 -->
+            <div id="synced-lyrics-section" class="mt-4 hidden"> <!-- Initially hidden -->
                 <h3>싱크 가사</h3>
                 <pre id="synced-lyrics-content" class="lyrics-content"></pre>
             </div>
@@ -171,25 +178,29 @@
             lyricsNavButtons.forEach(btn => btn.classList.add('hidden')); // Hide buttons on error
         }
 
-        // Function to handle button clicks and scroll
-        function scrollToSection(targetId) {
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                // Remove active class from all buttons
-                lyricsNavButtons.forEach(button => button.classList.remove('active'));
+        // Function to handle button clicks and show/hide sections
+        function showSection(targetId) {
+            // Hide all content sections
+            plainLyricsSection.classList.add('hidden');
+            syncedLyricsSection.classList.add('hidden');
 
-                // Add active class to the clicked button
-                document.querySelector(`.lyrics-nav-button[data-target="${targetId}"]`).classList.add('active');
+            // Show the target section
+            document.getElementById(targetId).classList.remove('hidden');
 
-                // Scroll smoothly to the target section
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            // Update active button state
+            lyricsNavButtons.forEach(button => {
+                if (button.dataset.target === targetId) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
         }
 
         // Add event listeners to navigation buttons
         lyricsNavButtons.forEach(button => {
             button.addEventListener('click', () => {
-                scrollToSection(button.dataset.target);
+                showSection(button.dataset.target);
             });
         });
 
@@ -227,20 +238,23 @@
                     songTitleElement.textContent += ` (${result.albumName})`;
                 }
 
-                plainLyricsSection.classList.remove('hidden'); // Show plain lyrics section
-                syncedLyricsSection.classList.remove('hidden'); // Show synced lyrics section
-                lyricsNavButtons.forEach(btn => btn.classList.remove('hidden')); // Show buttons after load
+                // Show buttons after load
+                lyricsNavButtons.forEach(btn => btn.classList.remove('hidden'));
 
                 if (result.instrumental) {
                     plainLyricsContent.textContent = '이 곡은 기악곡입니다.';
                     syncedLyricsContent.textContent = '이 곡은 기악곡입니다.';
+                    // If instrumental, only show plain lyrics section and hide synced lyrics button
+                    plainLyricsSection.classList.remove('hidden');
+                    syncedLyricsSection.classList.add('hidden');
+                    document.querySelector('.lyrics-nav-button[data-target="synced-lyrics-section"]').classList.add('hidden');
+                    document.querySelector('.lyrics-nav-button[data-target="plain-lyrics-section"]').classList.add('active');
                 } else {
                     plainLyricsContent.textContent = result.plainLyrics || '가사를 찾을 수 없습니다.';
                     syncedLyricsContent.textContent = result.syncedLyrics || '싱크된 가사를 찾을 수 없습니다.';
+                    // Default to showing plain lyrics
+                    showSection('plain-lyrics-section');
                 }
-
-                // Scroll to plain lyrics section by default after loading
-                scrollToSection('plain-lyrics-section');
 
             } catch (error) {
                 console.error('Failed to fetch lyrics detail:', error);
