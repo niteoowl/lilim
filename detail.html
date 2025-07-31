@@ -36,12 +36,12 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* 가사 섹션 스타일 */
+        /* 가사 섹션 스타일 - 박스 스타일 제거 */
         .lyrics-section {
-            background-color: #282828; /* Darker card background */
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            border: 1px solid #3a3a3a; /* Darker border */
+            background-color: transparent; /* 배경색 투명 */
+            border-radius: 0; /* 테두리 둥글기 제거 */
+            padding: 0; /* 패딩 제거 */
+            border: none; /* 테두리 제거 */
             margin-bottom: 1.5rem;
             width: 100%;
             max-width: 800px; /* Max width for readability */
@@ -77,6 +77,46 @@
             font-size: 1.1rem;
         }
 
+        /* 가사/싱크 가사 버튼 스타일 */
+        .lyrics-nav-button {
+            background-color: transparent;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #a0a0a0; /* Default color for inactive */
+            cursor: pointer;
+            transition: color 0.2s;
+            position: relative; /* For underline effect */
+            overflow: hidden; /* For underline animation */
+        }
+        .lyrics-nav-button:hover {
+            color: #f0f0f0; /* Lighter on hover */
+        }
+        .lyrics-nav-button.active {
+            color: #03c75a; /* Green when active */
+        }
+        .lyrics-nav-button::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px; /* Underline thickness */
+            background-color: transparent;
+            transform: translateX(-100%); /* Start off-screen to the left */
+            transition: transform 0.3s ease-out, background-color 0.2s ease-out;
+        }
+        .lyrics-nav-button.active::after {
+            background-color: #03c75a; /* Green underline when active */
+            transform: translateX(0); /* Slide in */
+        }
+        .lyrics-nav-button:hover::after {
+            background-color: #f0f0f0; /* Lighter underline on hover */
+            transform: translateX(0); /* Slide in */
+        }
+
+
         /* 반응형 디자인을 위한 미디어 쿼리 */
         @media (min-width: 768px) { /* md (768px) 이상 화면 */
             body {
@@ -91,6 +131,12 @@
             <h2 id="song-title"></h2>
             <div id="loading-spinner" class="loader"></div>
             <p id="error-message" class="error-message hidden"></p>
+
+            <!-- 가사/싱크 가사 버튼 섹션 -->
+            <div class="flex justify-center border-b border-gray-700 mb-6">
+                <button class="lyrics-nav-button active" data-target="plain-lyrics-section">가사</button>
+                <button class="lyrics-nav-button ml-4" data-target="synced-lyrics-section">싱크 가사</button>
+            </div>
 
             <div id="plain-lyrics-section" class="mt-4">
                 <h3>가사</h3>
@@ -113,6 +159,8 @@
         const plainLyricsSection = document.getElementById('plain-lyrics-section');
         const syncedLyricsSection = document.getElementById('synced-lyrics-section');
 
+        const lyricsNavButtons = document.querySelectorAll('.lyrics-nav-button');
+
         // Function to display an error message
         function displayError(message) {
             errorMessageElement.textContent = message;
@@ -120,7 +168,30 @@
             songTitleElement.textContent = ''; // Clear title
             plainLyricsSection.classList.add('hidden'); // Hide lyrics sections
             syncedLyricsSection.classList.add('hidden');
+            lyricsNavButtons.forEach(btn => btn.classList.add('hidden')); // Hide buttons on error
         }
+
+        // Function to handle button clicks and scroll
+        function scrollToSection(targetId) {
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                // Remove active class from all buttons
+                lyricsNavButtons.forEach(button => button.classList.remove('active'));
+
+                // Add active class to the clicked button
+                document.querySelector(`.lyrics-nav-button[data-target="${targetId}"]`).classList.add('active');
+
+                // Scroll smoothly to the target section
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Add event listeners to navigation buttons
+        lyricsNavButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                scrollToSection(button.dataset.target);
+            });
+        });
 
         // Function to fetch and display lyrics
         async function fetchLyricsDetail(id) {
@@ -128,6 +199,7 @@
             errorMessageElement.classList.add('hidden'); // Hide any previous error messages
             plainLyricsSection.classList.add('hidden'); // Hide lyrics sections initially
             syncedLyricsSection.classList.add('hidden');
+            lyricsNavButtons.forEach(btn => btn.classList.add('hidden')); // Hide buttons initially
 
             if (!id) {
                 displayError('가사 ID가 제공되지 않았습니다.');
@@ -157,6 +229,7 @@
 
                 plainLyricsSection.classList.remove('hidden'); // Show plain lyrics section
                 syncedLyricsSection.classList.remove('hidden'); // Show synced lyrics section
+                lyricsNavButtons.forEach(btn => btn.classList.remove('hidden')); // Show buttons after load
 
                 if (result.instrumental) {
                     plainLyricsContent.textContent = '이 곡은 기악곡입니다.';
@@ -165,6 +238,9 @@
                     plainLyricsContent.textContent = result.plainLyrics || '가사를 찾을 수 없습니다.';
                     syncedLyricsContent.textContent = result.syncedLyrics || '싱크된 가사를 찾을 수 없습니다.';
                 }
+
+                // Scroll to plain lyrics section by default after loading
+                scrollToSection('plain-lyrics-section');
 
             } catch (error) {
                 console.error('Failed to fetch lyrics detail:', error);
