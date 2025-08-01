@@ -39,9 +39,23 @@
             border: 1px solid #3a3a3a; /* Darker border */
             margin-bottom: 1rem;
             cursor: pointer; /* Add pointer for clickable cards */
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
         }
         .result-card:hover {
             background-color: #333; /* Slightly darker on hover */
+        }
+        /* 앨범 아트 스타일 */
+        .album-art-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .result-content {
+            flex-grow: 1;
         }
         .result-title {
             font-size: 1.1rem;
@@ -49,11 +63,21 @@
             color: #88bbff; /* Lighter blue for links */
             margin-bottom: 0.5rem;
         }
-        .result-snippet {
+        .result-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 0.9rem;
-            color: #a0a0a0; /* Darker text for snippet */
-            margin-bottom: 0.5rem;
+            color: #a0a0a0;
         }
+        .result-info .artist-name {
+            font-weight: 500;
+        }
+        .result-info .duration {
+            font-weight: 400;
+            color: #777;
+        }
+        
         /* 로딩 스피너 스타일 */
         .loader {
             border: 4px solid #f3f3f3; /* Light grey */
@@ -68,6 +92,25 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* 검색 기록 스타일 */
+        .search-history-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .search-history-item {
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px; /* Full rounded corners */
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .search-history-item:hover {
+            background-color: #4a4a4a;
         }
 
         /* 모달 스타일 (이제 사용되지 않음, 하지만 스타일은 유지) */
@@ -162,6 +205,10 @@
                 </svg>
             </button>
         </div>
+        <!-- 검색 기록 섹션 -->
+        <div id="search-history-container" class="search-history-container">
+            <!-- 검색 기록 버튼이 여기에 동적으로 표시됩니다. -->
+        </div>
     </div>
 
     <!-- 검색 결과 섹션 -->
@@ -200,22 +247,110 @@
         const searchResultsContainer = document.getElementById('search-results-container');
         const loadingSpinner = document.getElementById('loading-spinner');
         const initialMessage = document.getElementById('initial-message');
-
-        // 모달 관련 요소는 이제 사용되지 않지만, 만약을 위해 변수는 유지합니다.
-        // const lyricsModalOverlay = document.getElementById('lyrics-modal-overlay');
-        // const modalCloseButton = document.getElementById('modal-close-button');
-        // const modalLyricsTitle = document.getElementById('modal-lyrics-title');
-        // const plainLyricsContent = document.getElementById('plain-lyrics-content');
-        // const syncedLyricsContent = document.getElementById('synced-lyrics-content');
-        // const modalLoadingSpinner = document.getElementById('modal-loading-spinner');
-        // const modalErrorMessage = document.getElementById('modal-error-message');
+        const searchHistoryContainer = document.getElementById('search-history-container');
 
         // Function to display messages (e.g., no results, error) in the main search area
         function displayMessage(message) {
             searchResultsContainer.innerHTML = `<p class="text-gray-400 text-center py-8">${message}</p>`;
         }
 
-        // Function to fetch search results from LRCLIB API
+        // Helper function to format duration in seconds to mm:ss
+        function formatDuration(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+        
+        // Function to save search query to local storage
+        function saveSearchHistory(query) {
+            if (!query) return;
+            let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            // Remove the query if it already exists to move it to the front
+            history = history.filter(item => item !== query);
+            // Add the new query to the front
+            history.unshift(query);
+            // Limit the history to 5 items
+            if (history.length > 5) {
+                history = history.slice(0, 5);
+            }
+            localStorage.setItem('searchHistory', JSON.stringify(history));
+            displaySearchHistory(); // Update the displayed history
+        }
+
+        // Function to display search history from local storage
+        function displaySearchHistory() {
+            const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            searchHistoryContainer.innerHTML = '';
+            if (history.length > 0) {
+                history.forEach(query => {
+                    const historyItem = document.createElement('span');
+                    historyItem.className = 'search-history-item';
+                    historyItem.textContent = query;
+                    historyItem.addEventListener('click', () => {
+                        searchInput.value = query;
+                        fetchSearchResults(query);
+                    });
+                    searchHistoryContainer.appendChild(historyItem);
+                });
+            }
+        }
+
+        // Function to fetch album art from iTunes Search API
+        async function fetchAlbumArtFromiTunes(artist, track) {
+            const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(artist)}+${encodeURIComponent(track)}&entity=song&country=KR`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`iTunes API error: ${response.statusText}`);
+                }
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    const artworkUrl = data.results[0].artworkUrl100;
+                    if (artworkUrl) {
+                        // 사용자의 제안에 따라 고화질 이미지 URL로 변경
+                        return artworkUrl.replace('100x100bb', '600x600bb');
+                    }
+                }
+            } catch (error) {
+                console.error('iTunes fetch error:', error);
+            }
+            return null;
+        }
+
+        // Function to translate Korean text to English using the LLM API
+        async function getEnglishTranslation(koreanQuery) {
+            const prompt = `Translate the following Korean music title/artist/album name to English, providing only the translated text. Do not provide any extra explanation or formatting. If the text is already English, return it as is. Text: ${koreanQuery}`;
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text.trim();
+                    return text;
+                } else {
+                    console.error('LLM API response structure unexpected:', result);
+                    return null;
+                }
+            } catch (error) {
+                console.error('LLM translation error:', error);
+                return null;
+            }
+        }
+        
+        // Function to fetch search results from LRCLIB API and iTunes API
         async function fetchSearchResults(query) {
             if (!query) {
                 displayMessage('검색어를 입력해주세요.');
@@ -225,45 +360,88 @@
             searchResultsContainer.innerHTML = ''; // Clear previous results
             loadingSpinner.style.display = 'block'; // Show main loading spinner
             initialMessage.style.display = 'none'; // Hide initial message
+            
+            // Save search query to history
+            saveSearchHistory(query);
 
-            const apiUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+            const lrclibApiUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+            
+            // LLM을 사용하여 영어 번역본 가져오기
+            const translatedQuery = await getEnglishTranslation(query);
+            
+            // 검색할 쿼리 목록 생성
+            const searchQueries = [lrclibApiUrl];
+            if (translatedQuery && translatedQuery.toLowerCase() !== query.toLowerCase()) {
+                searchQueries.push(`https://lrclib.net/api/search?q=${encodeURIComponent(translatedQuery)}`);
+            }
 
             try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    // Handle HTTP errors
-                    if (response.status === 404) {
-                        displayMessage('검색 결과가 없습니다.');
-                    } else {
-                        displayMessage(`검색 중 오류가 발생했습니다: ${response.statusText}`);
+                const fetchPromises = searchQueries.map(url => fetch(url).then(res => res.json()));
+                const allResults = await Promise.all(fetchPromises);
+                
+                // 모든 결과를 하나의 배열로 병합
+                let combinedResults = allResults.flat();
+                
+                // 중복 제거 (trackName과 artistName 조합으로 식별)
+                const uniqueResults = [];
+                const seen = new Set();
+                combinedResults.forEach(item => {
+                    const identifier = `${item.trackName}-${item.artistName}`;
+                    if (!seen.has(identifier)) {
+                        seen.add(identifier);
+                        uniqueResults.push(item);
                     }
-                    return;
-                }
+                });
 
-                const results = await response.json();
-
-                if (results.length === 0) {
+                if (uniqueResults.length === 0) {
                     displayMessage('검색 결과가 없습니다.');
                 } else {
-                    results.forEach(result => {
+                    // Fetch album art for all unique results concurrently
+                    const albumArtPromises = uniqueResults.map(result => 
+                        fetchAlbumArtFromiTunes(result.artistName, result.trackName)
+                    );
+                    const albumArts = await Promise.all(albumArtPromises);
+
+                    uniqueResults.forEach((result, index) => {
                         const resultCard = document.createElement('div');
                         resultCard.className = 'result-card';
                         resultCard.dataset.lyricsId = result.id; // Store LRC ID
 
-                        const titleLink = document.createElement('a');
-                        titleLink.className = 'result-title hover:underline';
-                        titleLink.textContent = `${result.trackName} - ${result.artistName}`;
-                        if (result.albumName) {
-                            titleLink.textContent += ` (${result.albumName})`;
+                        // 앨범 아트 요소 추가: iTunes > LRCLIB > 플레이스홀더 순으로 적용
+                        const albumArt = document.createElement('img');
+                        albumArt.className = 'album-art-thumbnail';
+                        albumArt.src = albumArts[index] || result.albumArt || 'https://placehold.co/80x80/3a3a3a/e0e0e0?text=No+Image';
+                        albumArt.alt = `${result.albumName ? result.albumName + ' album art' : 'No album art'}`;
+                        resultCard.appendChild(albumArt);
+                        
+                        // 텍스트 콘텐츠 컨테이너
+                        const contentContainer = document.createElement('div');
+                        contentContainer.className = 'result-content';
+
+                        const title = document.createElement('h3');
+                        title.className = 'result-title hover:underline';
+                        title.textContent = `${result.trackName}`;
+
+                        const infoContainer = document.createElement('div');
+                        infoContainer.className = 'result-info';
+
+                        const artistName = document.createElement('span');
+                        artistName.className = 'artist-name';
+                        artistName.textContent = result.artistName;
+
+                        const durationSpan = document.createElement('span');
+                        durationSpan.className = 'duration';
+                        if (result.duration) {
+                            durationSpan.textContent = formatDuration(result.duration);
                         }
 
-                        const snippet = document.createElement('p');
-                        snippet.className = 'result-snippet';
-                        const plainLyricsSnippet = result.plainLyrics ? result.plainLyrics.substring(0, 150) : '';
-                        snippet.textContent = plainLyricsSnippet.length > 0 ? plainLyricsSnippet + '...' : '가사 미리보기를 사용할 수 없습니다.';
+                        infoContainer.appendChild(artistName);
+                        infoContainer.appendChild(durationSpan);
 
-                        resultCard.appendChild(titleLink);
-                        resultCard.appendChild(snippet);
+                        contentContainer.appendChild(title);
+                        contentContainer.appendChild(infoContainer);
+                        
+                        resultCard.appendChild(contentContainer);
                         searchResultsContainer.appendChild(resultCard);
 
                         // Add event listener to the entire card to navigate to detail page
@@ -307,11 +485,11 @@
             }
         });
 
-        // Call parseUrlAndSearch on page load
-        document.addEventListener('DOMContentLoaded', parseUrlAndSearch);
-
-        // 모달 관련 함수 및 이벤트 리스너는 이제 사용되지 않으므로 주석 처리하거나 제거할 수 있습니다.
-        // showLyricsModal, closeLyricsModal, modalCloseButton.addEventListener 등
+        // Call parseUrlAndSearch and displaySearchHistory on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            parseUrlAndSearch();
+            displaySearchHistory();
+        });
     </script>
 </body>
 </html>
